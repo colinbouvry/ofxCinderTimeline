@@ -14,11 +14,11 @@ void BasicTweenApp::update() {
 void BasicTweenApp::draw() {
     ofSetColor(ofColor::black);
     ofFill();
-    ofCircle(mBlackPos, 20.0f);
+	ofDrawCircle(mBlackPos.value().x, mBlackPos.value().y, 20.0f);
 
     ofSetColor(ofColor::white);
     ofFill();
-    ofCircle(mWhitePos, 16.0f);
+	ofDrawCircle(mWhitePos.value().x, mWhitePos.value().y, 16.0f);
 }
 
 void BasicTweenApp::mousePressed(int x, int y, int button) {
