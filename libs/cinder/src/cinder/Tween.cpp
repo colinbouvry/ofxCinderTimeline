@@ -25,6 +25,8 @@
 #include "cinder/Tween.h"
 #include "cinder/Timeline.h"
 
+#include <algorithm>
+
 using namespace std;
 
 namespace cinder {
@@ -84,6 +86,19 @@ void AnimBase::setReplace( const AnimBase &rhs )
 	if( mParentTimeline ) {
 		mParentTimeline->replaceTarget( rhs.mVoidPtr, mVoidPtr );
 	}	
+}
+
+bool AnimBase::isComplete() const
+{
+	if( ! mParentTimeline )
+		return true;
+	else {
+		TimelineItemRef lastTween = mParentTimeline->findLastEnd( mVoidPtr );
+		if( lastTween )
+			return lastTween->isComplete();
+		else
+			return true;
+	}
 }
 
 void AnimBase::stop()

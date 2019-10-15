@@ -28,10 +28,9 @@
 #include "cinder/TimelineItem.h"
 #include "cinder/CinderMath.h"
 #include "cinder/Easing.h"
-#include "cinder/Function.h"
+#include "cinder/Quaternion.h"
 
 #include <list>
-#include <boost/utility.hpp>
 
 namespace cinder {
 
@@ -50,6 +49,30 @@ T tweenLerp( const T &start, const T &end, float time )
 {
 	return start * ( 1 - time ) + end * time;
 }
+
+// Specialization of tweenLerp for Quaternions to use slerping
+template<>
+inline quat tweenLerp( const quat &start, const quat &end, float time )
+{
+	quat val = glm::slerp( start, end, time );
+	glm::vec3 axis = glm::axis( val );
+	if( std::isfinite( axis.x ) && std::isfinite( axis.y ) && std::isfinite( axis.z ) )
+		return val;
+	else
+		return quat();
+}
+
+template<>
+inline dquat tweenLerp( const dquat &start, const dquat &end, float time )
+{
+	dquat val = glm::slerp( start, end, (double)time );
+	glm::dvec3 axis = glm::axis( val );
+	if( std::isfinite( axis.x ) && std::isfinite( axis.y ) && std::isfinite( axis.z ) )
+		return val;
+	else
+		return dquat();
+}
+
 
 class TweenBase : public TimelineItem {
   public:
@@ -172,9 +195,11 @@ class Tween : public TweenBase {
 		Options&	reverseFinishFn( const TweenBase::FinishFn &reverseFinishFn ) { mTweenRef->setReverseFinishFn( reverseFinishFn ); return *this; }
 		Options&	easeFn( const EaseFn &easeFunc ) { mTweenRef->setEaseFn( easeFunc ); return *this; }
 		Options&	delay( float delayAmt ) { mTweenRef->setStartTime( mTweenRef->getStartTime() + delayAmt ); return *this; }
+		Options&	startTime( float time ) { mTweenRef->setStartTime( time ); return *this; }
 		Options&	autoRemove( bool remove = true ) { mTweenRef->setAutoRemove( remove ); return *this; }
 		Options&	loop( bool doLoop = true ) { mTweenRef->setLoop( doLoop ); return *this; }
 		Options&	pingPong( bool doPingPong = true ) { mTweenRef->setPingPong( doPingPong ); return *this; }
+		Options&	infinite( bool doInfinite = true ) { mTweenRef->setInfinite( doInfinite ); return *this; }
 		Options&	timelineEnd( float offset = 0 ) { TweenBase::Options::timelineEnd( *mTweenRef, offset ); return *this; }
 		template<typename Y>
 		Options&	appendTo( Anim<Y> *endTarget, float offset = 0 ) { TweenBase::Options::appendTo( *mTweenRef, endTarget->ptr(), offset ); return *this; }	
@@ -275,6 +300,9 @@ class AnimBase {
   public:
   	//! removes self from Timeline
 	void 	stop();
+
+	//! returns false if any tweens are active on 'this', otherwise true
+	bool isComplete() const;
 	
 	//! returns the parent timeline for the Anim<> or NULL if there is none
 	TimelineRef	getParent() const { return mParentTimeline; }
@@ -318,7 +346,6 @@ class Anim : public AnimBase {
 		return *this;
   	}
 
-#if defined( CINDER_RVALUE_REFERENCES )
 	Anim( Anim &&rhs ) // move constructor
 		: AnimBase( &mValue )
 	{
@@ -334,7 +361,6 @@ class Anim : public AnimBase {
 		}
 		return *this;
 	}
-#endif
 
 	Anim<T>& operator=( T value ) { mValue = value; return *this; }
 
